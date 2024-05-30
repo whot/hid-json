@@ -1,0 +1,17 @@
+[package]
+name = "hid-json"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+homepage = "https://github.com/hidutils"
+repository = "https://github.com/hidutils/hid-json"
+description = "HID Report Descriptor to JSON converter"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.86"
+clap = { version = "4.5.4", features = ["derive"] }
+hidreport = { version = "0.3.0" }
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.117"
