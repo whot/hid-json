@@ -153,8 +153,8 @@ struct JsonItem {
 }
 
 #[derive(Serialize)]
-struct JsonDecode {
-    version: u32,
+struct JsonDecode<'a> {
+    version: &'a str,
     descriptor: JsonDescriptor,
     items: Vec<JsonItem>,
 }
@@ -170,7 +170,7 @@ fn hid_decode() -> Result<()> {
 
     let bytes = std::fs::read(&cli.path)?;
 
-    let version = 1;
+    let version = "1.0";
     let descriptor = JsonDescriptor {
         length: bytes.len(),
         data: if cli.skip_data {
