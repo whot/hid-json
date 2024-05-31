@@ -136,6 +136,30 @@ impl<T> From<&T> for JsonItemName
     }
 }
 
+// Warning: These enum value names are JSON API
+#[derive(Serialize)]
+enum JsonCollection {
+    Physical,
+    Logical,
+    Application,
+}
+
+impl JsonCollection {
+    // can't implement try_from generically, so let's do this instead
+    fn lookup(item: &impl Item) -> Option<JsonCollection> {
+        match item.item_type() {
+            ItemType::Main(MainItem::Collection(c)) => Some(
+                match c {
+                    CollectionItem::Physical => JsonCollection::Physical,
+                    CollectionItem::Logical => JsonCollection::Logical,
+                    CollectionItem::Application => JsonCollection::Application,
+                    _  => todo!()
+                }),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Serialize)]
 struct JsonDescriptor {
     length: usize,
@@ -148,10 +172,20 @@ struct JsonItem {
     offset: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     data: Option<Vec<u8>>,
+    #[serde(rename = "type")]
     item_type: JsonItemType,
+    #[serde(rename = "name")]
     item_name: JsonItemName,
     #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<i32>,
+
+    // Very optional fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    collection: Option<JsonCollection>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage_page: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -159,6 +193,34 @@ struct JsonDecode<'a> {
     version: &'a str,
     descriptor: JsonDescriptor,
     items: Vec<JsonItem>,
+}
+
+fn lookup_usage_page(item: &impl Item) -> Option<hut::UsagePage> {
+    match item.item_type() {
+        ItemType::Global(GlobalItem::UsagePage { .. }) => {
+            if let Some(data) = item.data() {
+                let up: u16 = u32::try_from(&data).unwrap() as u16;
+                hut::UsagePage::try_from(up).ok()
+            } else {
+                None
+            }
+        },
+        _ => None,
+    }
+}
+
+fn lookup_usage(item: &impl Item, usage_page: u16) -> Option<hut::Usage> {
+    match item.item_type() {
+        ItemType::Local(LocalItem::Usage { .. }) => {
+            if let Some(data) = item.data() {
+                let u: u16 = u32::try_from(&data).unwrap() as u16;
+                hut::Usage::new_from_page_and_id(usage_page, u).ok()
+            } else {
+                None
+            }
+        },
+        _ => None,
+    }
 }
 
 fn hid_decode() -> Result<()> {
@@ -182,6 +244,7 @@ fn hid_decode() -> Result<()> {
         },
     };
 
+    let mut last_usage_page: u16 = 0;
     let rdesc_items = ReportDescriptorItems::try_from(bytes.as_slice())?;
     let items = rdesc_items
         .iter()
@@ -200,6 +263,14 @@ fn hid_decode() -> Result<()> {
                 Some(data) => Some(u32::try_from(&data).unwrap() as i32),
             };
 
+            if let ItemType::Global(GlobalItem::UsagePage { usage_page }) = item.item_type() {
+                last_usage_page = u16::from(usage_page);
+            }
+            // and now all the fields with a custom value
+            let collection = JsonCollection::lookup(item);
+            let usage_page = lookup_usage_page(item).map(|up| format!("{up}"));
+            let usage = lookup_usage(item, last_usage_page).map(|u| format!("{u}"));
+
             JsonItem {
                 offset,
                 data: if cli.skip_data {
@@ -210,6 +281,9 @@ fn hid_decode() -> Result<()> {
                 item_type,
                 item_name,
                 value,
+                collection,
+                usage_page,
+                usage,
             }
         })
         .collect::<Vec<JsonItem>>();

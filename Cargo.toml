@@ -13,5 +13,6 @@ description = "HID Report Descriptor to JSON converter"
 anyhow = "1.0.86"
 clap = { version = "4.5.4", features = ["derive"] }
 hidreport = { version = "0.3.0" }
+hut = { version = "0.2.0", path = "../hut" }
 serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.117"
