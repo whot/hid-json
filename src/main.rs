@@ -20,10 +20,15 @@ struct Cli {
     #[arg(short, long, default_value_t = false)]
     debug: bool,
 
+    #[arg(long, default_value_t = false)]
+    pretty: bool,
+
     /// Don't include the data values for the descriptor
     /// and items in the JSON output. This option
     /// is primarily used for debugging to make it easier
     /// to read the output.
+    ///
+    /// Implies --pretty
     #[arg(long, default_value_t = false)]
     skip_data: bool,
 
@@ -212,7 +217,7 @@ fn hid_decode() -> Result<()> {
         descriptor,
         items,
     };
-    if cli.skip_data {
+    if cli.skip_data || cli.pretty {
         serde_json::to_writer_pretty(stream, &decode)?;
     } else {
         serde_json::to_writer(stream, &decode)?;
