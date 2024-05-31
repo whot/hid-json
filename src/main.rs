@@ -42,6 +42,7 @@ struct Cli {
     path: PathBuf,
 }
 
+// Warning: These enum value names are JSON API
 #[derive(Serialize)]
 enum JsonItemType {
     Global,
@@ -50,6 +51,7 @@ enum JsonItemType {
     Unknown,
 }
 
+// Warning: These enum value names are JSON API
 #[derive(Serialize)]
 enum JsonItemName {
     Unknown,
